@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Azure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,8 +41,16 @@ builder.Services.AddSingleton<IDatabaseService, DatabaseService>((_) =>
 // Create a single instance of the CosmosClient to be shared across the application.
 builder.Services.AddSingleton<CosmosClient>((_) =>
 {
+
+    string userAssignedClientId = builder.Configuration["CosmosDB:ClientId"]!;
+    var credential = new DefaultAzureCredential(
+        new DefaultAzureCredentialOptions
+        {
+            ManagedIdentityClientId = userAssignedClientId
+        });
     CosmosClient client = new(
-        connectionString: builder.Configuration["CosmosDB:ConnectionString"]!
+        accountEndpoint: builder.Configuration["CosmosDB:AccountEndpoint"]!,
+        tokenCredential: credential
     );
     return client;
 });
@@ -147,7 +156,9 @@ app.MapGet("/Vectorize", async (string text, [FromServices] IVectorizationServic
 app.MapPost("/VectorSearch", async ([FromBody] float[] queryVector, [FromServices] IVectorizationService vectorizationService, int max_results = 0, double minimum_similarity_score = 0.8) =>
 {
     // Exercise 3 Task 3 TODO #3: Insert code to call the ExecuteVectorSearch function on the Vectorization Service. Don't forget to remove the NotImplementedException.
-    throw new NotImplementedException();
+    var results = await vectorizationService.ExecuteVectorSearch(queryVector, max_results, minimum_similarity_score);
+    return results;
+
 })
     .WithName("VectorSearch")
     .WithOpenApi();
