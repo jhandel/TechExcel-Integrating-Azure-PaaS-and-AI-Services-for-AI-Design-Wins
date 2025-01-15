@@ -49,7 +49,7 @@ builder.Services.AddSingleton<CosmosClient>((_) =>
             ManagedIdentityClientId = userAssignedClientId
         });
     CosmosClient client = new(
-        accountEndpoint: builder.Configuration["CosmosDB__AccountEndpoint"]!,
+        accountEndpoint: builder.Configuration["CosmosDB:AccountEndpoint"]!,
         tokenCredential: credential
     );
     return client;
