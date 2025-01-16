@@ -402,20 +402,15 @@ def save_transcript_to_cosmos_db(transcript_item):
     """Save embeddings to Cosmos DB vector store. Key assumptions:
     - transcript_item is a JSON object containing call_id (int), 
         call_transcript (string), and request_vector (list).
-    - Cosmos DB endpoint, client_id, and database name stored in Streamlit secrets."""
-
-    cosmos_client_id = st.secrets["cosmos"]["client_id"]
-    cosmos_credentials = DefaultAzureCredential(managed_identity_client_id=cosmos_client_id)
+    - Cosmos DB endpoint, key, and database name stored in Streamlit secrets."""
 
     cosmos_endpoint = st.secrets["cosmos"]["endpoint"]
+    cosmos_key = st.secrets["cosmos"]["key"]
     cosmos_database_name = st.secrets["cosmos"]["database_name"]
     cosmos_container_name = "CallTranscripts"
 
     # Create a CosmosClient
-    # Load the Cosmos database and container
-    # Insert the call transcript
-        # Create a CosmosClient
-    client = CosmosClient(url=cosmos_endpoint, credential=cosmos_credentials)
+    client = CosmosClient(url=cosmos_endpoint, credential=cosmos_key)
     # Load the Cosmos database and container
     database = client.get_database_client(cosmos_database_name)
     container = database.get_container_client(cosmos_container_name)
@@ -423,46 +418,6 @@ def save_transcript_to_cosmos_db(transcript_item):
     # Insert the call transcript
     container.create_item(body=transcript_item)
 
-
-    """Create and return a new vector search request. Key assumptions:
-    - Query embedding is a list of floats based on a search string.
-     - Cosmos DB endpoint, client_id, and database name stored in Streamlit secrets."""
-
-    cosmos_client_id = st.secrets["cosmos"]["client_id"]
-    cosmos_credentials = DefaultAzureCredential(managed_identity_client_id=cosmos_client_id)
-
-    cosmos_endpoint = st.secrets["cosmos"]["endpoint"]
-    cosmos_database_name = st.secrets["cosmos"]["database_name"]
-    cosmos_container_name = "CallTranscripts"
-
-    # Create a CosmosClient
-    client = CosmosClient(url=cosmos_endpoint, credential=cosmos_credentials)
-    # Load the Cosmos database and container
-    database = client.get_database_client(cosmos_database_name)
-    container = database.get_container_client(cosmos_container_name)
-
-    results = container.query_items(
-        query=f"""
-            SELECT TOP {max_results}
-                c.id,
-                c.call_id,
-                c.call_transcript,
-                c.abstractive_summary,
-                VectorDistance(c.request_vector, @request_vector) AS SimilarityScore
-            FROM c
-            WHERE
-                VectorDistance(c.request_vector, @request_vector) > {minimum_similarity_score}
-            ORDER BY
-                VectorDistance(c.request_vector, @request_vector)
-            """,
-        parameters=[
-            {"name": "@request_vector", "value": query_embedding}
-        ],
-        enable_cross_partition_query=True
-    )
-
-    # Create and return a new vector search request
-    return results
 
 
 ####################### HELPER FUNCTIONS FOR MAIN() #######################
